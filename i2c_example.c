@@ -57,8 +57,8 @@ static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command, __u8 value
 
 int main(int argc, char **argv)
 {
-	uint8_t data, addr = 0x76, reg = 0xd0, reg2 = 0xE0;
-	uint8_t val = 0xB6;
+	uint8_t data, addr = 0x48, reg = 0xd0, reg2 = 0x00;
+	uint8_t val = 65;	// ASCII value of "A"
 	const char *path = argv[1];
 	int file, rc;
 	int len;
@@ -79,12 +79,12 @@ int main(int argc, char **argv)
 	if (rc < 0)
 		err(errno, "Tried to set device address '0x%02x'", addr);
 
-	data = i2c_smbus_read_byte_data(file, reg);
+	// data = i2c_smbus_read_byte_data(file, reg);
 
-	printf("%s: device 0x%02x at address 0x%02x: 0x%02x\n",
-			path, addr, reg, data);
+	// printf("%s: device 0x%02x at address 0x%02x: 0x%02x\n",
+	// 		path, addr, reg, data);
 
-	len = i2c_smbus_write_byte_data(file, reg, val);
+	len = i2c_smbus_write_byte_data(file, reg2, val);
 	if (len < 0)
 		err(errno, "Tried to write data '0x%02x'", val);
 
