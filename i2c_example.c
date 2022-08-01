@@ -55,9 +55,94 @@ static inline __s32 i2c_smbus_write_byte_data(int file, __u8 command, __u8 value
 				I2C_SMBUS_BYTE_DATA, &data);
 }
 
+#define REG_THR 0x00
+#define REG_LCR 0x03
+
+// Special Register Set
+// Accessible only when LCR[7] is logic 1.
+#define REG_DLL 0x00
+#define REG_DLH 0x01
+
+#define CLOLK_FREQUENCY 14745600
+#define BAUD 			115200
+#define PRESCALER 		1			//  The default value of prescaler after reset is 1.
+
+int write_byte(int file, uint8_t reg, uint8_t val){
+	int len;
+	len = i2c_smbus_write_byte_data(file, reg, val);
+	if (len < 0)
+		err(errno, "Tried to write data '0x%02x'", val);
+	return len;
+}
+
+// uint8_t read_byte(int file, uint8_t reg){
+// 	uint8_t data;
+// 	data = i2c_smbus_read_byte_data(file, REG_DLH);
+// 	printf("Address 0x%02x: 0x%02x\n",
+// 			reg, data);
+// 	return data
+// }
+
+/**
+ * @brief Initialize baud rate to 115200 and 8-N-1 by default
+ *
+ * @return true if success
+ */
+void init_sc16is750(uint8_t addr, int file){
+	// int rc, len;
+	// uint8_t lcr, dlh, dll, data, val;
+	// uint16_t divisor = (CLOLK_FREQUENCY) / (BAUD * 16);	// = 8
+	// dll = divisor & 0xFF;
+	// dlh = divisor >> 8;
+
+	// if (file < 0)
+	// 	err(errno, "Tried to open '%s'", path);
+
+	// lcr = i2c_smbus_read_byte_data(file, REG_LCR);
+	// val = lcr || 0b10000000;
+
+	// printf("%s: device 0x%02x at address 0x%02x: 0x%02x\n",
+	// 		path, addr, reg, data);
+
+	write_byte(file, REG_LCR, 0b10000011); 	// no parity, 1 stop bit, 8 bit word length, enable special register set
+	write_byte(file, REG_DLL, 0x08);
+	write_byte(file, REG_DLH, 0x00);
+	write_byte(file, REG_LCR, 0b00000011);	// disable special register set
+
+}
+
+/**
+ * @brief Initialize baud rate to 115200 and 8-N-1 by default
+ *
+ * @return true if success
+ */
+void read_divisor(uint8_t addr, int file){
+	// int len;
+	uint8_t lcr, data, val;	// dlh, dll,
+
+	lcr = i2c_smbus_read_byte_data(file, REG_LCR);
+	val = lcr | 0b10000000;	// Set LCR[7] = 1
+
+	printf("REG_LCR: device 0x%02x at address 0x%02x: 0x%02x\n",
+			addr, REG_LCR, lcr);
+
+	write_byte(file, REG_LCR, val);		// Enables Register Set 2.
+
+	data = i2c_smbus_read_byte_data(file, REG_DLL);
+	printf("REG_DLL: 0x%02x at address 0x%02x: 0x%02x\n",
+			addr, REG_DLL, data);
+	data = i2c_smbus_read_byte_data(file, REG_DLH);
+	printf("REG_DLH: 0x%02x at address 0x%02x: 0x%02x\n",
+			addr, REG_DLH, data);
+
+	val = lcr & 0b01111111;	// Set LCR[7] = 0
+	write_byte(file, REG_LCR, val);
+
+}
+
 int main(int argc, char **argv)
 {
-	uint8_t data, addr = 0x48, reg = 0xd0, reg2 = 0x00;
+	uint8_t addr = 0x48;	// data,
 	uint8_t val = 65;	// ASCII value of "A"
 	const char *path = argv[1];
 	int file, rc;
@@ -66,10 +151,10 @@ int main(int argc, char **argv)
 	if (argc == 1)
 		errx(-1, "path [i2c address] [register]");
 
-	if (argc > 2)
-		addr = strtoul(argv[2], NULL, 0);
-	if (argc > 3)
-		reg = strtoul(argv[3], NULL, 0);
+	// if (argc > 2)
+	// 	addr = strtoul(argv[2], NULL, 0);
+	// if (argc > 3)
+	// 	reg = strtoul(argv[3], NULL, 0);
 
 	file = open(path, O_RDWR);
 	if (file < 0)
@@ -79,16 +164,13 @@ int main(int argc, char **argv)
 	if (rc < 0)
 		err(errno, "Tried to set device address '0x%02x'", addr);
 
-	// data = i2c_smbus_read_byte_data(file, reg);
+	read_divisor(addr, file);
 
-	// printf("%s: device 0x%02x at address 0x%02x: 0x%02x\n",
-	// 		path, addr, reg, data);
-
-	len = i2c_smbus_write_byte_data(file, reg2, val);
+	len = i2c_smbus_write_byte_data(file, REG_THR, val);
 	if (len < 0)
 		err(errno, "Tried to write data '0x%02x'", val);
 
 	printf("%s: device 0x%02x at address 0x%02x: 0x%02x\n",
-			path, addr, reg2, val);
+			path, addr, REG_THR, val);
 }
 
