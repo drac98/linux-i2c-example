@@ -165,6 +165,8 @@ int main(int argc, char **argv)
 		err(errno, "Tried to set device address '0x%02x'", addr);
 
 	read_divisor(addr, file);
+	init_sc16is750(addr, file);
+	read_divisor(addr, file);
 
 	len = i2c_smbus_write_byte_data(file, REG_THR, val);
 	if (len < 0)
