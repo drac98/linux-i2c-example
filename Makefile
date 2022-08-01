@@ -1,4 +1,4 @@
-CROSS_COMPILE := arm-linux-gnueabi-
+CROSS_COMPILE :=
 
 CC	:= $(CROSS_COMPILE)gcc
 
